@@ -1,4 +1,5 @@
 from pathlib import Path
+
 def get_config():
     return {
         'batch_size':8,
