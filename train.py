@@ -97,8 +97,6 @@ def get_or_build_tokenizer(config,ds,lang):
 def get_ds(config):
     #load_dataset('opus_books', f"{config['lang_src']}-{config['lang_tgt']}", split='train')
     ds_raw=load_dataset("opus_books", "en-it", split="train")
-
-    
     # ds_raw=ds_raw.map(lambda x: x['translation']['it'])
     # ds_raw=ds_raw.map(lambda x: x['translation']['en'])
 
@@ -167,18 +165,24 @@ def train_model(config):
         for batch in batch_iterator:
             model.train()
 
-            encoder_input =batch['encoder_input'].to(device)
-            decoder_input =batch['decoder_input'].to(device)
+            encoder_input = batch['encoder_input'].to(device)
+            decoder_input = batch['decoder_input'].to(device)
             encoder_mask = batch['encoder_mask'].to(device)
             decoder_mask = batch['decoder_mask'].to(device)
-
-            encoder_output= model.encode(encoder_input,encoder_mask)
-            decoder_output = model.decode(encoder_output,encoder_mask,decoder_input,decoder_mask)
-            proj_output = model.project(decoder_output)
-
             label = batch['label'].to(device)
 
-            loss= loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
+            # Forward pass
+            encoder_output = model.encode(encoder_input, encoder_mask)
+            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask)
+            proj_output = model.project(decoder_output)
+
+            # Loss calculation
+            loss = loss_fn(
+                proj_output.view(-1, tokenizer_tgt.get_vocab_size()),
+                label.view(-1)
+            )
+
+            # Optional: update tqdm
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
 
 
