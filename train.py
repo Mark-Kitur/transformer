@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset,DataLoader,random_split
-from dataset import BilingualDataset,casual_mask
-from config import get_config,get_weigths_file_path
-
-from model import build_transformer
+from transformer.dataset import BilingualDataset,casual_mask
+from transformer.config import get_config,get_weigths_file_path
+#chaos
+from transformer.model import build_transformer
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
