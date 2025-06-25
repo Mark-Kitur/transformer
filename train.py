@@ -95,7 +95,7 @@ def get_or_build_tokenizer(config,ds,lang):
     return tokenizer
 
 def get_ds(config):
-    ds_raw= load_dataset('opus_books',f'{config['lang_src']}-{config['lang_tgt']}',split='train')
+    ds_raw= load_dataset('opus_books',f"{config['lang_src']}-{config['lang_tgt']}",split='train')
 
     # build tokenizer
     tokenizer_src= get_or_build_tokenizer(config,ds_raw, config['lang_src'])
@@ -126,7 +126,7 @@ def get_ds(config):
 
 
 def get_model(config, vocab_src_len,vocab_tgt_len):
-    model = build_transformer(vocab_src_len,vocab_tgt_len,config['seq_len'],config['seq_len'], config['de_model'])
+    model = build_transformer(vocab_src_len,vocab_tgt_len,config['seq_len'],config['seq_len'], config['d_model'])
     return model
 
 def train_model(config):
@@ -141,20 +141,21 @@ def train_model(config):
     
     writer =SummaryWriter(config['experiment_name'])
 
-    optimizer= torch.optim.Adam(model.parameters(),lr=config['lr'],eps=1e-9)
+    optimizer= torch.optim.Adam(model.parameters(),lr=config['learning_rate'],eps=1e-9)
 
     initial_epoch=0
     global_step=0
     if config['preload']:
         model_filename = get_weigths_file_path(config, config['preload'])
         print(f'Preload model {model_filename}')
+        
         state =torch.load(model_filename)
         initial_epoch=state['epoch']+1
         optimizer.load_state_dict(state['optimizer_state_dict'])
         global_step = state['global_step']
     loss_fn= nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
 
-    for epoch in range(initial_epoch, config['num_epochs']):
+    for epoch in range(initial_epoch, config['epochs']):
         batch_iterator =tqdm(train_dataloader, desc=f'Processing epoch {epoch:02d}')
         for batch in batch_iterator:
             model.train()
@@ -165,13 +166,14 @@ def train_model(config):
             decoder_mask = batch['decoder_mask'].to(device)
 
             encoder_output= model.encode(encoder_input,encoder_mask)
-            decoder_output = model.decode(decoder_output,encoder_mask,decoder_input,decoder_mask)
+            decoder_output = model.decode(encoder_output,encoder_mask,decoder_input,decoder_mask)
             proj_output = model.project(decoder_output)
 
             label = batch['label'].to(device)
 
             loss= loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
-            batch_iterator.set_postfix({f"loss:" f"{loss.item():6.3f}"})
+            batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
+
 
             # log the loss
             writer.add_scalar('train loss', loss.item(),global_step)
